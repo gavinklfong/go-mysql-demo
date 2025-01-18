@@ -32,6 +32,9 @@ func main() {
 		Addr:   "127.0.0.1:3306",
 		DBName: "forex",
 	}
+
+	fmt.Println(cfg.FormatDSN())
+
 	// Get a database handle.
 	var err error
 	db, err = sql.Open("mysql", cfg.FormatDSN())

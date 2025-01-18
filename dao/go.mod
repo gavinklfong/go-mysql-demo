@@ -1,10 +1,14 @@
-module example.com/mysql-demo
+module example.com/dao
+
+replace example.com/model => ../model
 
 go 1.23.4
 
 require (
+	example.com/model v0.0.0-00010101000000-000000000000
 	github.com/go-sql-driver/mysql v1.8.1
-	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
+	github.com/stretchr/testify v1.10.0
+	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.35.0
 )
 
@@ -46,8 +50,6 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.35.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
