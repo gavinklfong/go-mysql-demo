@@ -25,7 +25,8 @@ type ForexRateDaoTestSuite struct {
 	db             *sql.DB
 }
 
-func (suite *ForexRateDaoTestSuite) SetupTest() {
+func (suite *ForexRateDaoTestSuite) SetupSuite() {
+	log.Println("setting up test")
 	ctx := context.Background()
 
 	// start up MySQL testcontainer
@@ -45,6 +46,13 @@ func (suite *ForexRateDaoTestSuite) SetupTest() {
 }
 
 func (suite *ForexRateDaoTestSuite) TearDownTest() {
+	_, err := suite.db.Exec("DELETE FROM forex_rate_booking")
+	if err != nil {
+		log.Panic("fail to clean up data")
+	}
+}
+
+func (suite *ForexRateDaoTestSuite) TearDownSuite() {
 
 	log.Println("closing DB handler")
 	if err := suite.db.Close(); err != nil {
@@ -75,6 +83,30 @@ func (suite *ForexRateDaoTestSuite) TestInsert() {
 
 }
 
+func (suite *ForexRateDaoTestSuite) TestFindByID() {
+	bookingID := "1f648720-3bd3-4c8e-8d00-294516f64bf7"
+
+	duration, err := time.ParseDuration("10m")
+	if err != nil {
+		log.Panic("fail to parse duration")
+	}
+	booking := model.ForexRateBooking{ID: bookingID, Timestamp: time.Now(), BaseCurrency: "GBP",
+		CounterCurrency: "USD", Rate: 0.25, TradeAction: "BUY", BaseCurrencyAmount: 1000,
+		BookingRef: "ABCD100", ExpiryTime: time.Now().Add(duration), CustomerID: "f1440302-01ab-4083-88fd-8864ae83d435"}
+
+	err = insertBooking(suite.db, &booking)
+	if err != nil {
+		fmt.Println("fail to insert", err)
+	}
+
+	var actual *model.ForexRateBooking
+	actual, err = suite.dao.findByID(bookingID)
+
+	// TODO: need follow up on Equal(). timestamp comparison issue
+	assert.NotNil(suite.T(), actual)
+
+}
+
 func TestForexRateDaoTestSuite(t *testing.T) {
 	suite.Run(t, new(ForexRateDaoTestSuite))
 }
@@ -87,7 +119,7 @@ func openDB(ctx context.Context, mysqlContainer *mysql.MySQLContainer) (*sql.DB,
 	}
 	log.Println("MySQL connection string: ", connStr)
 
-	db, err := sql.Open("mysql", connStr)
+	db, err := sql.Open("mysql", connStr+"?parseTime=true")
 	return db, err
 }
 
@@ -109,4 +141,18 @@ func startMySQLContainer() (*mysql.MySQLContainer, error) {
 
 	return mysqlContainer, nil
 
+}
+
+func insertBooking(db *sql.DB, booking *model.ForexRateBooking) error {
+	_, err := db.Exec("INSERT INTO forex_rate_booking(id, timestamp, base_currency, counter_currency, rate, "+
+		"trade_action, base_currency_amount, booking_ref, expiry_time, customer_id) VALUES "+
+		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		booking.ID, booking.Timestamp, booking.BaseCurrency, booking.CounterCurrency, booking.Rate,
+		booking.TradeAction, booking.BaseCurrencyAmount, booking.BookingRef, booking.ExpiryTime, booking.CustomerID)
+	if err != nil {
+		log.Fatalf("insert booking: %v", err)
+		return err
+	}
+
+	return nil
 }
