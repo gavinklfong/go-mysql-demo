@@ -16,5 +16,7 @@ CREATE TABLE customer (
     id VARCHAR(50) NOT NULL,
     name VARCHAR(50) NOT NULL,
     tier int,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     PRIMARY KEY (id)
 );

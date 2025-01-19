@@ -16,8 +16,8 @@ func NewCustomerDao(db *sql.DB) *CustomerDao {
 }
 
 func (dao *CustomerDao) Insert(customer *model.Customer) (int64, error) {
-	result, err := dao.db.Exec("INSERT INTO customer(id, name, tier) VALUES (?, ?, ?)",
-		customer.ID, customer.Name, customer.Tier)
+	result, err := dao.db.Exec("INSERT INTO customer(id, name, tier, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+		customer.ID, customer.Name, customer.Tier, customer.CreatedAt, customer.UpdatedAt)
 	if err != nil {
 		log.Fatalf("insert customer: %v", err)
 		return 0, err
@@ -34,9 +34,8 @@ func (dao *CustomerDao) Insert(customer *model.Customer) (int64, error) {
 
 func (dao *CustomerDao) FindByID(id string) (*model.Customer, error) {
 	var customer model.Customer
-	err := dao.db.QueryRow("SELECT id, name, tier "+
-		"FROM customer "+
-		"WHERE id=?", id).Scan(&customer.ID, &customer.Name, &customer.Tier)
+	err := dao.db.QueryRow("SELECT id, name, tier, created_at, updated_at "+
+		"FROM customer WHERE id=?", id).Scan(&customer.ID, &customer.Name, &customer.Tier, &customer.CreatedAt, &customer.UpdatedAt)
 	switch {
 	case err == sql.ErrNoRows:
 		log.Printf("no customer record with id %v\n", id)

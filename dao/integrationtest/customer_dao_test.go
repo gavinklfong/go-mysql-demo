@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"database/sql"
+
+	"math/rand"
 
 	"example.com/dao"
 	"example.com/model"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
+	"github.com/jaswdr/faker"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go/modules/mysql"
@@ -55,8 +60,7 @@ func (suite *CustomerDaoTestSuite) TearDownSuite() {
 }
 
 func (suite *CustomerDaoTestSuite) TestInsert() {
-	customer := model.Customer{ID: "1f648720-3bd3-4c8e-8d00-294516f64bf7", Name: "Customer Name", Tier: 1}
-
+	customer := buildCustomer()
 	count, err := suite.dao.Insert(&customer)
 	if err != nil {
 		fmt.Println("fail to insert", err)
@@ -67,8 +71,7 @@ func (suite *CustomerDaoTestSuite) TestInsert() {
 }
 
 func (suite *CustomerDaoTestSuite) TestFindByID() {
-	customer := model.Customer{ID: "1f648720-3bd3-4c8e-8d00-294516f64bf7", Name: "Customer Name", Tier: 1}
-
+	customer := buildCustomer()
 	err := insertCustomer(suite.db, &customer)
 	if err != nil {
 		fmt.Println("fail to insert", err)
@@ -83,7 +86,7 @@ func (suite *CustomerDaoTestSuite) TestFindByID() {
 		suite.T().Error("No record found")
 	}
 
-	assert.Equal(suite.T(), actual, &customer)
+	assertCustomerEqual(suite.T(), actual, &customer)
 
 }
 
@@ -91,9 +94,26 @@ func TestCustomerDaoTestSuite(t *testing.T) {
 	suite.Run(t, new(CustomerDaoTestSuite))
 }
 
+func assertCustomerEqual(t *testing.T, a, b *model.Customer) {
+	assert.Equal(t, a.ID, b.ID)
+	assert.Equal(t, a.Name, b.Name)
+	assert.Equal(t, a.Tier, b.Tier)
+	assert.Equal(t, a.CreatedAt.Round(time.Duration(time.Second)), b.CreatedAt.Round(time.Duration(time.Second)))
+	assert.Equal(t, a.UpdatedAt.Round(time.Duration(time.Second)), b.UpdatedAt.Round(time.Duration(time.Second)))
+}
+
+func buildCustomer() model.Customer {
+	faker := faker.New()
+
+	timestamp := time.Now().In(time.UTC)
+	uuid := uuid.New()
+	return model.Customer{ID: uuid.String(), Name: faker.Person().Name(),
+		Tier: rand.Intn(5), CreatedAt: timestamp, UpdatedAt: timestamp}
+}
+
 func insertCustomer(db *sql.DB, customer *model.Customer) error {
-	_, err := db.Exec("INSERT INTO customer(id, name, tier) VALUES (?, ?, ?)",
-		customer.ID, customer.Name, customer.Tier)
+	_, err := db.Exec("INSERT INTO customer(id, name, tier, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+		customer.ID, customer.Name, customer.Tier, customer.CreatedAt, customer.UpdatedAt)
 
 	if err != nil {
 		log.Fatalf("insert customer: %v", err)
