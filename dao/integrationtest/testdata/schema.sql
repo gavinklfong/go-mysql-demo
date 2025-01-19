@@ -11,3 +11,10 @@ CREATE TABLE forex_rate_booking (
     customer_id VARCHAR(50),
     PRIMARY KEY (id)
 );
+
+CREATE TABLE customer (
+    id VARCHAR(50) NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    tier int,
+    PRIMARY KEY (id)
+);

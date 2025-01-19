@@ -11,7 +11,11 @@ type ForexRateDao struct {
 	db *sql.DB
 }
 
-func (dao *ForexRateDao) insert(booking *model.ForexRateBooking) (int64, error) {
+func NewForexRateDao(db *sql.DB) *ForexRateDao {
+	return &ForexRateDao{db: db}
+}
+
+func (dao *ForexRateDao) Insert(booking *model.ForexRateBooking) (int64, error) {
 	result, err := dao.db.Exec("INSERT INTO forex_rate_booking(id, timestamp, base_currency, counter_currency, rate, "+
 		"trade_action, base_currency_amount, booking_ref, expiry_time, customer_id) VALUES "+
 		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -31,7 +35,7 @@ func (dao *ForexRateDao) insert(booking *model.ForexRateBooking) (int64, error) 
 	return count, nil
 }
 
-func (dao *ForexRateDao) findByID(id string) (*model.ForexRateBooking, error) {
+func (dao *ForexRateDao) FindByID(id string) (*model.ForexRateBooking, error) {
 	var booking model.ForexRateBooking
 	err := dao.db.QueryRow("SELECT id, timestamp, base_currency, counter_currency, rate, "+
 		"trade_action, base_currency_amount, booking_ref, expiry_time, customer_id "+
@@ -41,7 +45,7 @@ func (dao *ForexRateDao) findByID(id string) (*model.ForexRateBooking, error) {
 	switch {
 	case err == sql.ErrNoRows:
 		log.Printf("no booking record with id %v\n", id)
-		return nil, err
+		return nil, nil
 	case err != nil:
 		log.Fatalf("query error: %v\n", err)
 		return nil, err

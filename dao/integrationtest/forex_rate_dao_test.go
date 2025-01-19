@@ -1,26 +1,25 @@
-package dao
+package integrationtest
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"database/sql"
 
+	"example.com/dao"
 	"example.com/model"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/mysql"
 )
 
 type ForexRateDaoTestSuite struct {
 	suite.Suite
-	dao            *ForexRateDao
+	dao            *dao.ForexRateDao
 	mysqlContainer *mysql.MySQLContainer
 	db             *sql.DB
 }
@@ -41,7 +40,7 @@ func (suite *ForexRateDaoTestSuite) SetupSuite() {
 	if err != nil {
 		log.Panic("fail to connect to MySQL container\n", err)
 	}
-	suite.dao = &ForexRateDao{suite.db}
+	suite.dao = dao.NewForexRateDao(suite.db)
 
 }
 
@@ -53,16 +52,7 @@ func (suite *ForexRateDaoTestSuite) TearDownTest() {
 }
 
 func (suite *ForexRateDaoTestSuite) TearDownSuite() {
-
-	log.Println("closing DB handler")
-	if err := suite.db.Close(); err != nil {
-		log.Println("failed to close database", err)
-	}
-
-	log.Println("shutting down MySQL container")
-	if err := testcontainers.TerminateContainer(suite.mysqlContainer); err != nil {
-		log.Printf("failed to terminate container: %s\n", err)
-	}
+	cleanUp(suite.db, suite.mysqlContainer)
 }
 
 func (suite *ForexRateDaoTestSuite) TestInsert() {
@@ -74,7 +64,7 @@ func (suite *ForexRateDaoTestSuite) TestInsert() {
 		CounterCurrency: "USD", Rate: 0.25, TradeAction: "BUY", BaseCurrencyAmount: 1000,
 		BookingRef: "ABCD100", ExpiryTime: time.Now().Add(duration), CustomerID: "f1440302-01ab-4083-88fd-8864ae83d435"}
 
-	count, err := suite.dao.insert(&booking)
+	count, err := suite.dao.Insert(&booking)
 	if err != nil {
 		fmt.Println("fail to insert", err)
 	}
@@ -100,12 +90,14 @@ func (suite *ForexRateDaoTestSuite) TestFindByID() {
 	}
 
 	var actual *model.ForexRateBooking
-	actual, err = suite.dao.findByID(bookingID)
+	actual, err = suite.dao.FindByID(bookingID)
+	if err != nil {
+		suite.T().Error("fail to retrieve record", err)
+	}
+	if actual == nil {
+		suite.T().Error("No record found")
+	}
 
-	fmt.Printf("expected: %+v\n", booking)
-	fmt.Printf("actual: %+v\n", actual)
-
-	// TODO: need follow up on Equal(). timestamp comparison issue
 	assertForexRateBookingEqual(suite.T(), actual, &booking)
 
 }
@@ -116,47 +108,15 @@ func TestForexRateDaoTestSuite(t *testing.T) {
 
 func assertForexRateBookingEqual(t *testing.T, a, b *model.ForexRateBooking) {
 	assert.Equal(t, a.ID, b.ID)
-	assert.Equal(t, a.Timestamp.Truncate(time.Duration(time.Second)), b.Timestamp.Truncate(time.Duration(time.Second)))
+	assert.Equal(t, a.Timestamp.Round(time.Duration(time.Second)), b.Timestamp.Round(time.Duration(time.Second)))
 	assert.Equal(t, a.BaseCurrency, b.BaseCurrency)
 	assert.Equal(t, a.CounterCurrency, b.CounterCurrency)
 	assert.Equal(t, a.Rate, b.Rate)
 	assert.Equal(t, a.TradeAction, b.TradeAction)
 	assert.Equal(t, a.BaseCurrencyAmount, b.BaseCurrencyAmount)
 	assert.Equal(t, a.BookingRef, b.BookingRef)
-	assert.Equal(t, a.ExpiryTime.Truncate(time.Duration(time.Second)), b.ExpiryTime.Truncate(time.Duration(time.Second)))
+	assert.Equal(t, a.ExpiryTime.Round(time.Duration(time.Second)), b.ExpiryTime.Round(time.Duration(time.Second)))
 	assert.Equal(t, a.CustomerID, b.CustomerID)
-}
-
-func openDB(ctx context.Context, mysqlContainer *mysql.MySQLContainer) (*sql.DB, error) {
-
-	connStr, err := mysqlContainer.ConnectionString(ctx)
-	if err != nil {
-		return nil, err
-	}
-	log.Println("MySQL connection string: ", connStr)
-
-	db, err := sql.Open("mysql", connStr+"?parseTime=true&loc=UTC")
-	return db, err
-}
-
-func startMySQLContainer() (*mysql.MySQLContainer, error) {
-	ctx := context.Background()
-
-	mysqlContainer, err := mysql.Run(ctx,
-		"mysql:8.0.36",
-		mysql.WithDatabase("forex"),
-		mysql.WithUsername("root"),
-		mysql.WithPassword("password"),
-		mysql.WithScripts(filepath.Join("testdata", "schema.sql")),
-	)
-
-	if err != nil {
-		log.Printf("failed to start container: %s\n", err)
-		return nil, err
-	}
-
-	return mysqlContainer, nil
-
 }
 
 func insertBooking(db *sql.DB, booking *model.ForexRateBooking) error {
