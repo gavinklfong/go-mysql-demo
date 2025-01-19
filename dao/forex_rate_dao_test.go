@@ -90,9 +90,9 @@ func (suite *ForexRateDaoTestSuite) TestFindByID() {
 	if err != nil {
 		log.Panic("fail to parse duration")
 	}
-	booking := model.ForexRateBooking{ID: bookingID, Timestamp: time.Now(), BaseCurrency: "GBP",
+	booking := model.ForexRateBooking{ID: bookingID, Timestamp: time.Now().In(time.UTC), BaseCurrency: "GBP",
 		CounterCurrency: "USD", Rate: 0.25, TradeAction: "BUY", BaseCurrencyAmount: 1000,
-		BookingRef: "ABCD100", ExpiryTime: time.Now().Add(duration), CustomerID: "f1440302-01ab-4083-88fd-8864ae83d435"}
+		BookingRef: "ABCD100", ExpiryTime: time.Now().Add(duration).In(time.UTC), CustomerID: "f1440302-01ab-4083-88fd-8864ae83d435"}
 
 	err = insertBooking(suite.db, &booking)
 	if err != nil {
@@ -102,13 +102,29 @@ func (suite *ForexRateDaoTestSuite) TestFindByID() {
 	var actual *model.ForexRateBooking
 	actual, err = suite.dao.findByID(bookingID)
 
+	fmt.Printf("expected: %+v\n", booking)
+	fmt.Printf("actual: %+v\n", actual)
+
 	// TODO: need follow up on Equal(). timestamp comparison issue
-	assert.NotNil(suite.T(), actual)
+	assertForexRateBookingEqual(suite.T(), actual, &booking)
 
 }
 
 func TestForexRateDaoTestSuite(t *testing.T) {
 	suite.Run(t, new(ForexRateDaoTestSuite))
+}
+
+func assertForexRateBookingEqual(t *testing.T, a, b *model.ForexRateBooking) {
+	assert.Equal(t, a.ID, b.ID)
+	assert.Equal(t, a.Timestamp.Truncate(time.Duration(time.Second)), b.Timestamp.Truncate(time.Duration(time.Second)))
+	assert.Equal(t, a.BaseCurrency, b.BaseCurrency)
+	assert.Equal(t, a.CounterCurrency, b.CounterCurrency)
+	assert.Equal(t, a.Rate, b.Rate)
+	assert.Equal(t, a.TradeAction, b.TradeAction)
+	assert.Equal(t, a.BaseCurrencyAmount, b.BaseCurrencyAmount)
+	assert.Equal(t, a.BookingRef, b.BookingRef)
+	assert.Equal(t, a.ExpiryTime.Truncate(time.Duration(time.Second)), b.ExpiryTime.Truncate(time.Duration(time.Second)))
+	assert.Equal(t, a.CustomerID, b.CustomerID)
 }
 
 func openDB(ctx context.Context, mysqlContainer *mysql.MySQLContainer) (*sql.DB, error) {
@@ -119,7 +135,7 @@ func openDB(ctx context.Context, mysqlContainer *mysql.MySQLContainer) (*sql.DB,
 	}
 	log.Println("MySQL connection string: ", connStr)
 
-	db, err := sql.Open("mysql", connStr+"?parseTime=true")
+	db, err := sql.Open("mysql", connStr+"?parseTime=true&loc=UTC")
 	return db, err
 }
 
