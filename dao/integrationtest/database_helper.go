@@ -27,9 +27,9 @@ func startMySQLContainer() (*mysql.MySQLContainer, error) {
 
 	mysqlContainer, err := mysql.Run(ctx,
 		"mysql:8.0.36",
-		mysql.WithDatabase("forex"),
-		mysql.WithUsername("root"),
-		mysql.WithPassword("password"),
+		mysql.WithDatabase("example"),
+		mysql.WithUsername("appuser"),
+		mysql.WithPassword("passme"),
 		mysql.WithScripts(filepath.Join("testdata", "schema.sql")),
 	)
 
@@ -39,7 +39,6 @@ func startMySQLContainer() (*mysql.MySQLContainer, error) {
 	}
 
 	return mysqlContainer, nil
-
 }
 
 func cleanUp(db *sql.DB, mysqlContainer *mysql.MySQLContainer) {

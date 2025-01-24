@@ -47,3 +47,26 @@ func (dao *CustomerDao) FindByID(id string) (*model.Customer, error) {
 		return &customer, nil
 	}
 }
+
+func (dao *CustomerDao) FindByTier(tier int) (result []*model.Customer, err error) {
+	rows, err := dao.db.Query("SELECT id, name, tier, created_at, updated_at "+
+		"FROM customer WHERE tier=?", tier)
+	defer rows.Close()
+
+	if err != nil {
+		log.Fatalf("query error: %v\n", err)
+		return nil, err
+	}
+
+	var customer model.Customer
+	for rows.Next() {
+		err := rows.Scan(&customer.ID, &customer.Name, &customer.Tier, &customer.CreatedAt, &customer.UpdatedAt)
+		if err != nil {
+			log.Fatalf("query error: %v\n", err)
+			return nil, err
+		}
+		result = append(result, &customer)
+	}
+
+	return result, nil
+}

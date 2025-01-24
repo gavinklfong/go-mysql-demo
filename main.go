@@ -26,11 +26,13 @@ func main() {
 
 	// Capture connection properties.
 	cfg := mysql.Config{
-		User:   "appuser",
-		Passwd: "passme",
-		Net:    "tcp",
-		Addr:   "127.0.0.1:3306",
-		DBName: "forex",
+		User:      "appuser",
+		Passwd:    "passme",
+		Net:       "tcp",
+		Addr:      "127.0.0.1:3306",
+		DBName:    "forex",
+		ParseTime: true,
+		Loc:       time.UTC,
 	}
 
 	fmt.Println(cfg.FormatDSN())
